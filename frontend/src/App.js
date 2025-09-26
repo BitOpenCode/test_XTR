@@ -120,7 +120,14 @@ function App() {
         username: userInfo.username
       };
 
+      // Проверяем, что tgid не пустой
+      if (!purchaseData.tgid || purchaseData.tgid === '') {
+        throw new Error('Telegram ID не может быть пустым');
+      }
+
       console.log('Отправляем запрос на покупку:', purchaseData);
+      console.log('URL webhook:', WEBHOOK_URL);
+      console.log('Данные пользователя:', userInfo);
 
       const response = await axios.post(WEBHOOK_URL, purchaseData, {
         headers: {
