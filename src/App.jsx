@@ -80,9 +80,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [userInfo, setUserInfo] = useState({
-    tgid: '',
-    first_name: '',
-    username: '',
+    tgid: 123456789, // В реальной системе получается из Telegram
+    first_name: 'Пользователь',
+    username: 'user',
     current_xp: 0
   });
 
@@ -120,10 +120,7 @@ function App() {
         username: userInfo.username
       };
 
-      // Проверяем, что tgid не пустой
-      if (!purchaseData.tgid || purchaseData.tgid === '') {
-        throw new Error('Telegram ID не может быть пустым');
-      }
+      // В реальной системе tgid получается из Telegram автоматически
 
       console.log('=== ОТЛАДКА ПОКУПКИ ===');
       console.log('Данные пользователя из state:', userInfo);
@@ -187,51 +184,13 @@ function App() {
         <p>Покупайте XP за Telegram Stars (XTR)</p>
       </header>
 
-      <div className="user-info">
-        <h3>👤 Информация о пользователе</h3>
-        
-        <div className="form-group">
-          <label htmlFor="tgid">Telegram ID *:</label>
-          <input
-            id="tgid"
-            type="number"
-            value={userInfo.tgid}
-            onChange={(e) => setUserInfo(prev => ({ ...prev, tgid: parseInt(e.target.value) || '' }))}
-            placeholder="Введите ваш Telegram ID"
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-        
-        <div className="form-group">
-          <label htmlFor="first_name">Имя (необязательно):</label>
-          <input
-            id="first_name"
-            type="text"
-            value={userInfo.first_name}
-            onChange={(e) => setUserInfo(prev => ({ ...prev, first_name: e.target.value }))}
-            placeholder="Ваше имя"
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-        
-        <div className="form-group">
-          <label htmlFor="username">Username (необязательно):</label>
-          <input
-            id="username"
-            type="text"
-            value={userInfo.username}
-            onChange={(e) => setUserInfo(prev => ({ ...prev, username: e.target.value }))}
-            placeholder="@username"
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-        
-        <div className="user-balance">
-          <span>Текущий баланс XP:</span>
-          <span className="balance-amount">{formatNumber(userInfo.current_xp)} XP</span>
-        </div>
-      </div>
+          <div className="user-info">
+            <h3>👤 Информация о пользователе</h3>
+            <div className="user-balance">
+              <span>Текущий баланс XP:</span>
+              <span className="balance-amount">{formatNumber(userInfo.current_xp)} XP</span>
+            </div>
+          </div>
 
       <div className="products-grid">
         {PRODUCTS.map(product => (
@@ -253,10 +212,10 @@ function App() {
             <button
               className="buy-button"
               onClick={() => handleBuyClick(product)}
-              disabled={isLoading || !userInfo.tgid}
+              disabled={isLoading}
             >
               <ShoppingCart size={20} />
-              {!userInfo.tgid ? 'Введите TG ID' : `Купить за ${product.price} XTR`}
+              Купить за {product.price} XTR
             </button>
           </div>
         ))}
