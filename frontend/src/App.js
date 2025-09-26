@@ -80,9 +80,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [userInfo, setUserInfo] = useState({
-    tgid: 123456789, // Тестовый tgid
-    first_name: 'Тестовый',
-    username: 'test_user',
+    tgid: '',
+    first_name: '',
+    username: '',
     current_xp: 0
   });
 
@@ -100,6 +100,14 @@ function App() {
 
   const handleConfirmPurchase = async () => {
     if (!selectedProduct) return;
+    
+    if (!userInfo.tgid) {
+      setMessage({
+        type: 'error',
+        text: 'Пожалуйста, введите ваш Telegram ID'
+      });
+      return;
+    }
 
     setIsLoading(true);
     setMessage(null);
@@ -170,12 +178,47 @@ function App() {
 
       <div className="user-info">
         <h3>👤 Информация о пользователе</h3>
+        
+        <div className="form-group">
+          <label htmlFor="tgid">Telegram ID *:</label>
+          <input
+            id="tgid"
+            type="number"
+            value={userInfo.tgid}
+            onChange={(e) => setUserInfo(prev => ({ ...prev, tgid: parseInt(e.target.value) || '' }))}
+            placeholder="Введите ваш Telegram ID"
+            required
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="first_name">Имя (необязательно):</label>
+          <input
+            id="first_name"
+            type="text"
+            value={userInfo.first_name}
+            onChange={(e) => setUserInfo(prev => ({ ...prev, first_name: e.target.value }))}
+            placeholder="Ваше имя"
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="username">Username (необязательно):</label>
+          <input
+            id="username"
+            type="text"
+            value={userInfo.username}
+            onChange={(e) => setUserInfo(prev => ({ ...prev, username: e.target.value }))}
+            placeholder="@username"
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          />
+        </div>
+        
         <div className="user-balance">
           <span>Текущий баланс XP:</span>
           <span className="balance-amount">{formatNumber(userInfo.current_xp)} XP</span>
-        </div>
-        <div style={{ marginTop: '10px', fontSize: '0.9rem', opacity: 0.8 }}>
-          TG ID: {userInfo.tgid} | {userInfo.first_name} (@{userInfo.username})
         </div>
       </div>
 
@@ -199,10 +242,10 @@ function App() {
             <button
               className="buy-button"
               onClick={() => handleBuyClick(product)}
-              disabled={isLoading}
+              disabled={isLoading || !userInfo.tgid}
             >
               <ShoppingCart size={20} />
-              Купить за {product.price} XTR
+              {!userInfo.tgid ? 'Введите TG ID' : `Купить за ${product.price} XTR`}
             </button>
           </div>
         ))}

@@ -1,0 +1,318 @@
+{
+  "name": "XP Payment Success Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "xp-payment-success",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "xp-payment-success-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.pre_checkout_query }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "validate-payment",
+      "name": "Validate Payment Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "answerPreCheckoutQuery",
+        "preCheckoutQueryId": "={{ $json.pre_checkout_query.id }}",
+        "ok": true,
+        "options": {}
+      },
+      "id": "answer-precheckout",
+      "name": "Answer PreCheckout",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [680, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT t.*, p.name as product_name, p.xp_amount, p.price_xtr FROM xp_test_transactions t JOIN xp_test_products p ON t.product_id = p.product_id WHERE t.transaction_id = {{ $json.pre_checkout_query.invoice_payload }} AND t.status = 'invoice_sent'",
+        "options": {}
+      },
+      "id": "get-transaction",
+      "name": "Get Transaction",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 200],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "transaction-exists",
+      "name": "Transaction Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE xp_test_transactions SET status = 'completed', telegram_payment_charge_id = '{{ $('Webhook Trigger').item.json.pre_checkout_query.id }}', completed_at = NOW() WHERE transaction_id = {{ $('Get Transaction').item.json.transaction_id }}",
+        "options": {}
+      },
+      "id": "update-transaction",
+      "name": "Update Transaction",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 100],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE xtr_test_users SET current_xp = current_xp + {{ $('Get Transaction').item.json.xp_amount }}, total_xp_purchased = total_xp_purchased + {{ $('Get Transaction').item.json.xp_amount }} WHERE tgid = {{ $('Get Transaction').item.json.tgid }}",
+        "options": {}
+      },
+      "id": "update-user-xp",
+      "name": "Update User XP",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1560, 100],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $('Get Transaction').item.json.tgid }}",
+        "text": "🎉 Покупка успешно завершена!\n\n📦 Товар: {{ $('Get Transaction').item.json.product_name }}\n💎 Получено XP: {{ $('Get Transaction').item.json.xp_amount }}\n💰 Потрачено XTR: {{ $('Get Transaction').item.json.price_xtr }}\n\nСпасибо за покупку!",
+        "options": {}
+      },
+      "id": "send-success-message",
+      "name": "Send Success Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1780, 100],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Платеж успешно обработан\", \"tgid\": $('Get Transaction').item.json.tgid, \"xp_amount\": $('Get Transaction').item.json.xp_amount, \"price_xtr\": $('Get Transaction').item.json.price_xtr, \"timestamp\": new Date().toISOString() } }}",
+        "options": {}
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"message\": \"Неверные данные платежа\" } }}",
+        "options": {}
+      },
+      "id": "error-response-validation",
+      "name": "Error Response - Validation",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"message\": \"Транзакция не найдена или уже обработана\" } }}",
+        "options": {}
+      },
+      "id": "error-response-transaction",
+      "name": "Error Response - Transaction",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Payment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Payment Data": {
+      "main": [
+        [
+          {
+            "node": "Answer PreCheckout",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response - Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer PreCheckout": {
+      "main": [
+        [
+          {
+            "node": "Get Transaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Transaction": {
+      "main": [
+        [
+          {
+            "node": "Transaction Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transaction Exists?": {
+      "main": [
+        [
+          {
+            "node": "Update Transaction",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response - Transaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Transaction": {
+      "main": [
+        [
+          {
+            "node": "Update User XP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update User XP": {
+      "main": [
+        [
+          {
+            "node": "Send Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Success Message": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
