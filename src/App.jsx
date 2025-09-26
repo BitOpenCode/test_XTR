@@ -4,7 +4,7 @@ import axios from 'axios';
 import './index.css';
 
 // Конфигурация
-const WEBHOOK_URL = 'https://n8n-p.blc.am/webhook-test/xp-purchase';
+const WEBHOOK_URL = 'https://n8n-p.blc.am/webhook-test/xp-purchase?v=' + Date.now();
 
 // Тестовые данные товаров (в реальном приложении загружаются с сервера)
 const PRODUCTS = [
@@ -125,9 +125,13 @@ function App() {
         throw new Error('Telegram ID не может быть пустым');
       }
 
+      console.log('=== ОТЛАДКА ПОКУПКИ ===');
+      console.log('Данные пользователя из state:', userInfo);
       console.log('Отправляем запрос на покупку:', purchaseData);
       console.log('URL webhook:', WEBHOOK_URL);
-      console.log('Данные пользователя:', userInfo);
+      console.log('Тип tgid:', typeof purchaseData.tgid);
+      console.log('Значение tgid:', purchaseData.tgid);
+      console.log('========================');
 
       const response = await axios.post(WEBHOOK_URL, purchaseData, {
         headers: {
